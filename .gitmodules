@@ -1,0 +1,6 @@
+[submodule "Wiki"]
+	path = Wiki
+	url = https://github.com/Promioz/CLoude_Wiki.git
+[submodule "LLM"]
+	path = LLM
+	url = https://github.com/Promioz/Ai-Config.git
