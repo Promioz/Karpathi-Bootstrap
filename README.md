@@ -71,14 +71,20 @@ The submodules are pinned to specific commits. The Wiki repo auto-commits every
 6 hours via the topology daemon, so this parent repo drifts behind reality over
 time.
 
-To refresh the snapshot (point submodules at latest `main`):
+To refresh the snapshot manually (point submodules at latest `main`):
 
 ```bash
 cd ~/Dev/Karpathi-Bootstrap
 ./refresh.sh
 ```
 
-Recommended cadence: weekly, or before any known "wipe and restore" event.
+**Automated weekly refresh:** `bootstrap.sh` installs a `launchd` agent
+(`com.mm.karpathi-refresh`) that runs `refresh.sh` every Sunday at 03:00 local
+time. Logs land in `~/.local/logs/karpathi-refresh.log`. To disable:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.mm.karpathi-refresh.plist
+```
 
 ---
 
@@ -99,7 +105,8 @@ Karpathi-Bootstrap/
 ├── Wiki/                                         (submodule)
 ├── LLM/                                          (submodule)
 ├── launchd/
-│   └── com.mm.karpathi-watchdog.plist.template   (portable plist, __HOME__ substituted at install)
+│   ├── com.mm.karpathi-watchdog.plist.template   (15-min health-check agent)
+│   └── com.mm.karpathi-refresh.plist.template    (weekly submodule re-pin agent)
 ├── bootstrap.sh                                  (run once on fresh machine)
 ├── refresh.sh                                    (run periodically to pin latest)
 └── README.md

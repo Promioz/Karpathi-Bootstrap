@@ -114,6 +114,21 @@ else
 fi
 echo ""
 
+# ── 4b. Install weekly bootstrap-refresh launchd agent ──────────────────
+
+echo "→ Installing weekly bootstrap-refresh agent (Sundays at 03:00)..."
+REFRESH_SRC="$BOOTSTRAP_DIR/launchd/com.mm.karpathi-refresh.plist.template"
+REFRESH_DST="$HOME/Library/LaunchAgents/com.mm.karpathi-refresh.plist"
+if [ -f "$REFRESH_SRC" ] && [ -f "$BOOTSTRAP_DIR/refresh.sh" ]; then
+  sed "s|__HOME__|$HOME|g" "$REFRESH_SRC" > "$REFRESH_DST"
+  launchctl unload "$REFRESH_DST" 2>/dev/null || true
+  launchctl load "$REFRESH_DST"
+  echo "  ✓ Refresh agent loaded — submodule pointers will be re-pinned weekly"
+else
+  echo "  ⚠ refresh template or refresh.sh missing — skipping"
+fi
+echo ""
+
 # ── 5. Start PM2 daemon ─────────────────────────────────────────────────
 
 echo "→ Starting meta-orchestrator under PM2..."
