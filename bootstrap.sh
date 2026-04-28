@@ -53,25 +53,42 @@ echo ""
 
 # ── 2. Create Claude Code symlinks into LLM ─────────────────────────────
 
-echo "→ Wiring ~/.claude/CLAUDE.md and ~/.claude/skills symlinks..."
-mkdir -p "$HOME/.claude"
+echo "→ Wiring Claude Code symlinks (per LLM-OS Phase 6)..."
+mkdir -p "$HOME/.claude" "$HOME/.claude/skills" "$HOME/.claude/hooks"
 
+# CLAUDE.md → single file symlink
 CLAUDE_MD_TARGET="$LLM_DIR/claude/instructions/global.md"
-SKILLS_TARGET="$LLM_DIR/claude/skills"
-
 if [ -f "$CLAUDE_MD_TARGET" ]; then
   ln -sfn "$CLAUDE_MD_TARGET" "$HOME/.claude/CLAUDE.md"
-  echo "  ✓ ~/.claude/CLAUDE.md → $CLAUDE_MD_TARGET"
+  echo "  ✓ ~/.claude/CLAUDE.md → LLM/claude/instructions/global.md"
 else
   echo "  ⚠ $CLAUDE_MD_TARGET not found — skipping CLAUDE.md symlink"
 fi
 
-if [ -d "$SKILLS_TARGET" ]; then
-  ln -sfn "$SKILLS_TARGET" "$HOME/.claude/skills"
-  echo "  ✓ ~/.claude/skills → $SKILLS_TARGET"
+# Skills → per-skill symlinks (so Claude Code plugin-managed skills can coexist).
+# Only symlink directories (skip README.md and other markdown files).
+if [ -d "$LLM_DIR/claude/skills" ]; then
+  count=0
+  for skill_path in "$LLM_DIR/claude/skills"/*/; do
+    [ -d "$skill_path" ] || continue
+    skill=$(basename "$skill_path")
+    ln -sfn "$skill_path" "$HOME/.claude/skills/$skill"
+    count=$((count + 1))
+  done
+  echo "  ✓ $count skill symlinks created in ~/.claude/skills/"
 else
-  echo "  ⚠ $SKILLS_TARGET not found — skipping skills symlink"
+  echo "  ⚠ $LLM_DIR/claude/skills not found — skipping skills"
 fi
+
+# Hooks → per-file symlinks for the 4 official hooks.
+for hook in session-start.sh track-changes.sh session-end.sh post-compact.sh; do
+  src="$LLM_DIR/claude/hooks/$hook"
+  if [ -f "$src" ]; then
+    ln -sfn "$src" "$HOME/.claude/hooks/$hook"
+    chmod +x "$src" 2>/dev/null || true
+  fi
+done
+echo "  ✓ 4 hook symlinks created in ~/.claude/hooks/"
 echo ""
 
 # ── 3. Register MCP wiki-search server with Claude Code ─────────────────
@@ -129,11 +146,14 @@ else
 fi
 echo ""
 
-# ── 5. Start PM2 daemon ─────────────────────────────────────────────────
+# ── 5. Start PM2 daemon (wiki-pipe) ─────────────────────────────────────
 
-echo "→ Starting meta-orchestrator under PM2..."
+echo "→ Starting wiki-pipe under PM2..."
 cd "$WIKI_DIR"
-pm2 delete meta-orchestrator 2>/dev/null || true
+# Idempotent: clear any leftover entries from older bootstrap versions
+pm2 delete wiki-pipe 2>/dev/null || true
+pm2 delete meta-orchestrator 2>/dev/null || true   # legacy, retired 2026-04-27
+pm2 delete mcp-wiki-search 2>/dev/null || true     # legacy, runs via Claude Code MCP
 pm2 start ecosystem.config.cjs
 pm2 save
 echo ""
